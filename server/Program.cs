@@ -1,4 +1,5 @@
 using server;
+using server.Data;
 using StackExchange.Redis;
 using StateleSSE.AspNetCore;
 using StateleSSE.AspNetCore.Extensions;
@@ -11,14 +12,24 @@ builder.Services.Configure<HostOptions>(options =>
 
 
 
-builder.Services.AddInMemorySseBackplane();
+var redisConnection = builder.Environment.IsDevelopment()
+    ?Environment.GetEnvironmentVariable("PRODUCTION_REDIS_CONNECTION") 
+    :Environment.GetEnvironmentVariable("DEVELOPMENT_REDIS_CONNECTION");
+
+if (!string.IsNullOrEmpty(redisConnection))
+{
+    builder.Services.AddRedisSseBackplane(redisConnection);
+}
+else
+{
+    builder.Services.AddInMemorySseBackplane();
+}
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument(config =>
 {
     
 });
-builder.Services.AddRedisSseBackplane("localhost: 6379");
-builder.Services.AddOpenApiDocument();
 builder.Services.AddCors();
 
 var app = builder.Build();

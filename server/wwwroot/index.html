@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+<html>
+<body>
+<div id="messages"></div>
+<input id="msg" placeholder="Message" />
+<button onclick="send()">Send</button>
+
+<script>
+    const room = "123";
+    let connectionId;
+
+    const es = new EventSource("/connect");
+    es.addEventListener("connected", e => {
+        connectionId = JSON.parse(e.data).connectionId;
+        fetch(`/join?connectionId=${connectionId}&room=${room}`, { method: "POST" });
+    });
+    es.addEventListener(room, e => {
+        document.getElementById("messages").innerHTML += `<p>${JSON.parse(e.data).message}</p>`;
+    });
+
+    function send() {
+        fetch(`/send?room=${room}&message=${document.getElementById("msg").value}`, { method: "POST" });
+        document.getElementById("msg").value = "";
+    }
+</script>
+</body>
+</html>
