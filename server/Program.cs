@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using server.Data;
+using StackExchange.Redis;
 using StateleSSE.AspNetCore;
 using StateleSSE.AspNetCore.Extensions;
 using DotNetEnv;
@@ -16,18 +17,23 @@ builder.Services.Configure<HostOptions>(options =>
 Env.Load("../.env");
 
 // ---------- Redis Backplane ----------
-var redisConnection = builder.Environment.IsDevelopment()
-    ?Environment.GetEnvironmentVariable("DEVELOPMENT_REDIS_CONNECTION") 
-    :Environment.GetEnvironmentVariable("PRODUCTION_REDIS_CONNECTION");
 
-if (!string.IsNullOrEmpty(redisConnection))
+var redisConnection = builder.Environment.IsDevelopment()
+    ? Environment.GetEnvironmentVariable("DEVELOPMENT_REDIS_CONNECTION")
+    : Environment.GetEnvironmentVariable("PRODUCTION_REDIS_CONNECTION");
+
+if (!string.IsNullOrWhiteSpace(redisConnection))
 {
+    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        ConnectionMultiplexer.Connect(redisConnection));
+
     builder.Services.AddRedisSseBackplane(redisConnection);
 }
 else
 {
     builder.Services.AddInMemorySseBackplane();
 }
+
 
 //---------- Database ----------
 var dbConnection = builder.Environment.IsDevelopment()
@@ -51,15 +57,23 @@ if (string.IsNullOrWhiteSpace(jwtSecret))
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+            ClockSkew = TimeSpan.Zero,
+
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSecret.Trim())
+            )
         };
     });
+
 
 // ---------- Services ----------
 builder.Services.AddAuthorization();
@@ -67,7 +81,19 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApiDocument(config =>
 {
     config.Title = "SSE Chat API";
+
+    config.AddSecurity("Bearer", new NSwag.OpenApiSecurityScheme
+    {
+        Type = NSwag.OpenApiSecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Enter your JWT token"
+    });
+
+    config.OperationProcessors.Add(
+        new NSwag.Generation.Processors.Security.AspNetCoreOperationSecurityScopeProcessor("Bearer"));
 });
+
 builder.Services.AddCors();
 //---------- Build ----------
 var app = builder.Build();
