@@ -1,5 +1,6 @@
 # JetBrains Rider / IntelliJ
 .idea/
+.env
 
 # Visual Studio
 .vs/

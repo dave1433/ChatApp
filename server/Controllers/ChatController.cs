@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StateleSSE.AspNetCore;
 using server.Data;
@@ -33,13 +36,45 @@ public class ChatController (ISseBackplane backplane, ChatContext context) : Con
         await backplane.Groups.AddToGroupAsync(connectionId, room);
         await backplane.Clients.SendToGroupAsync(room, new JoinResponse("someone has entered room"));
     }
-
+    
+    [Authorize]
     [HttpPost("send")]
     [Produces<MessageResponse>]
-    public async Task Send(string room, string message)
+    public async Task<IActionResult> Send(string room, string message)
     {
-        await backplane.Clients.SendToGroupAsync(room, new MessageResponse(message));
+        var username = User.Identity?.Name;
+
+        if (string.IsNullOrWhiteSpace(username))
+            return Unauthorized("Missing username from token.");
+
+        var chatMessage = new ChatMessage
+        {
+            Room = room,
+            Username = username,
+            Content = message,
+            Timestamp = DateTime.UtcNow
+        };
+
+        context.ChatMessages.Add(chatMessage);
+        await context.SaveChangesAsync();
+
+        await backplane.Clients.SendToGroupAsync(room, new MessageResponse($"{username}: {message}"));
+
+        return Ok(chatMessage);
     }
+    
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory(string room)
+    {
+        var messages = await context.ChatMessages
+            .Where(m => m.Room == room)
+            .OrderBy(m => m.Timestamp)
+            .Take(50)
+            .ToListAsync();
+
+        return Ok(messages);
+    }
+
 
     [HttpPost("poke")]
     [Produces<PokeResponse>]

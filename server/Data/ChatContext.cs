@@ -8,5 +8,7 @@ public class ChatContext : DbContext
     {
     }
 
-    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<User> Users => Set<User>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>(); 
+    
 }

@@ -3,3 +3,20 @@ services:
     image: "redis:alpine"
     ports:
       - "6379:6379"
+    
+  redisinsight:
+      image: redis/redisinsight:latest
+      ports:
+        - "5540:5540"
+      depends_on:
+        - redis
+  
+  postgres:
+    image: postgres:latest
+    container_name: ssedemo-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: chatdb
+    ports:
+      - "5432:5432"
