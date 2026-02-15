@@ -1,0 +1,38 @@
+# JetBrains Rider / IntelliJ
+.idea/
+
+# Visual Studio
+.vs/
+.vscode/
+
+# Build outputs
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Dotnet tools / cache
+**/.dotnet/
