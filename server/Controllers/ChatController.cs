@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StateleSSE.AspNetCore;
 using server.Data;
