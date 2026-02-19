@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useAuth } from "../../core/hooks/useAuth";
 import type { ChatMessage } from "../../core/hooks/useChat";
 import { useSse } from "../../core/hooks/useSse";
-import { fetchMessagesRealtime, joinRoomRequest, sendMessageRequest } from "../../utils/api/chatApi";
+import { 
+    fetchMessagesRealtime, 
+    joinRoomRequest, 
+    sendMessageRequest,
+    updateMessageRequest,
+    deleteMessageRequest
+} from "../../utils/api/chatApi";
 
 import LoginForm from "../components/LoginForm";
 import RoomSelector from "../components/RoomSelector";
@@ -15,11 +21,38 @@ export default function ChatPage() {
 
     const { token, role, login, logout } = useAuth();
 
+    // Main Live Query for room messages (Task 2, 3, 5)
     const { connectionId } = useSse<ChatMessage[]>(
         room, 
         (id) => fetchMessagesRealtime(id, room),
         (data) => setMessages(data)
     );
+
+    // Task 4: Realtime @everyone notification
+    useSse<string>(
+        "global",
+        async (id) => {
+            const res = await fetch(`/chat/everyone-notifications?connectionId=${id}`);
+            return await res.json();
+        },
+        (alertMsg) => {
+            alert(alertMsg);
+        }
+    );
+
+    async function handleUpdate(id: number, content: string) {
+        if (!token) return;
+        try {
+            await updateMessageRequest(id, content, token);
+        } catch { alert("Update failed - maybe you don't own this message?"); }
+    }
+
+    async function handleDelete(id: number) {
+        if (!token) return;
+        try {
+            await deleteMessageRequest(id, token);
+        } catch { alert("Delete failed - maybe you don't own this message?"); }
+    }
 
     async function joinRoom() {
         if (!connectionId) return alert("Not connected yet");
@@ -76,7 +109,11 @@ export default function ChatPage() {
 
             <hr />
 
-            <MessageList messages={messages} />
+            <MessageList 
+                messages={messages} 
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+            />
 
             <hr />
 

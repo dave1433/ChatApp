@@ -1,3 +1,19 @@
+export async function updateMessageRequest(id: number, content: string, token: string) {
+    const res = await fetch(`/chat/update/${id}?newContent=${encodeURIComponent(content)}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Update failed");
+}
+
+export async function deleteMessageRequest(id: number, token: string) {
+    const res = await fetch(`/chat/delete/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Delete failed");
+}
+
 export async function fetchMessagesRealtime(connectionId: string, room: string) {
     const res = await fetch(`/chat/messages-realtime?connectionId=${connectionId}&room=${room}`);
 

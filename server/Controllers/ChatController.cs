@@ -15,27 +15,46 @@ namespace server.Controllers;
 public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeManager, ChatContext context)
     : RealtimeControllerBase(backplane)
 {
+    // Task 2 & 3 & 5: Filter by RoomId, Limit to 5, Include User
     [HttpGet("messages-realtime")]
-    public async Task<RealtimeListenResponse<List<ChatMessage>>> GetMessagesRealtime(string connectionId, string room)
+    public async Task<RealtimeListenResponse<List<ChatMessage>>> GetMessagesRealtime(string connectionId, string roomId)
     {
-        var group = $"room-messages:{room}";
+        var group = $"room-messages:{roomId}";
         await backplane.Groups.AddToGroupAsync(connectionId, group);
 
         realtimeManager.Subscribe<ChatContext>(connectionId, group,
-            criteria: changes => changes.OfType<ChatMessage>().Any(e => e.Entity.Room == room),
+            criteria: changes => changes.OfType<ChatMessage>().Any(e => e.Entity.RoomId == roomId),
             query: async ctx => await ctx.ChatMessages
-                .Where(m => m.Room == room)
-                .OrderBy(m => m.Timestamp)
-                .Take(50)
+                .Include(m => m.User)
+                .Where(m => m.RoomId == roomId)
+                .OrderByDescending(m => m.Timestamp)
+                .Take(5)
+                .OrderBy(m => m.Timestamp) // re-sort for UI
                 .ToListAsync());
 
         var initialData = await context.ChatMessages
-            .Where(m => m.Room == room)
+            .Include(m => m.User)
+            .Where(m => m.RoomId == roomId)
+            .OrderByDescending(m => m.Timestamp)
+            .Take(5)
             .OrderBy(m => m.Timestamp)
-            .Take(50)
             .ToListAsync();
 
         return new RealtimeListenResponse<List<ChatMessage>>(group, initialData);
+    }
+
+    // Task 4: Realtime query for "@everyone"
+    [HttpGet("everyone-notifications")]
+    public async Task<RealtimeListenResponse<string>> ListenForEveryone(string connectionId)
+    {
+        var group = "everyone-alerts";
+        await backplane.Groups.AddToGroupAsync(connectionId, group);
+
+        realtimeManager.Subscribe<ChatContext>(connectionId, group,
+            criteria: changes => changes.OfType<ChatMessage>().Any(e => e.Entity.Content.Contains("@everyone")),
+            query: async ctx => "Someone mentioned @everyone!");
+
+        return new RealtimeListenResponse<string>(group);
     }
 
     [HttpPost("join")]
@@ -45,38 +64,74 @@ public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeMa
         await backplane.Groups.AddToGroupAsync(connectionId, room);
         await backplane.Clients.SendToGroupAsync(room, new JoinResponse("someone has entered room"));
     }
-    
+
     [Authorize]
     [HttpPost("send")]
-    [Produces<MessageResponse>]
-    public async Task<IActionResult> Send(string room, string message)
+    [Produces<ChatMessage>]
+    public async Task<IActionResult> Send(string roomId, string message)
     {
         var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username)) return Unauthorized();
 
-        if (string.IsNullOrWhiteSpace(username))
-            return Unauthorized("Missing username from token.");
+        var user = await context.Users.FirstAsync(u => u.Username == username);
 
         var chatMessage = new ChatMessage
         {
-            Room = room,
-            Username = username,
+            RoomId = roomId,
+            UserId = user.Id,
             Content = message,
             Timestamp = DateTime.UtcNow
         };
 
         context.ChatMessages.Add(chatMessage);
-        await context.SaveChangesAsync();
-
-        await backplane.Clients.SendToGroupAsync(room, new MessageResponse($"{username}: {message}"));
+        await context.SaveChangesAsync(); // Triggers live queries
 
         return Ok(chatMessage);
     }
-    
+
+    // Task 1: Update Endpoint
+    [Authorize]
+    [HttpPut("update/{id}")]
+    public async Task<IActionResult> Update(long id, string newContent)
+    {
+        var msg = await context.ChatMessages.FindAsync(id);
+        if (msg == null) return NotFound();
+
+        // Check if user owns the message (optional but good)
+        var username = User.Identity?.Name;
+        var user = await context.Users.FirstAsync(u => u.Username == username);
+        if (msg.UserId != user.Id) return Forbid();
+
+        msg.Content = newContent;
+        await context.SaveChangesAsync(); // Triggers live queries
+
+        return Ok(msg);
+    }
+
+    // Task 1: Delete Endpoint
+    [Authorize]
+    [HttpDelete("delete/{id}")]
+    public async Task<IActionResult> Delete(long id)
+    {
+        var msg = await context.ChatMessages.FindAsync(id);
+        if (msg == null) return NotFound();
+
+        var username = User.Identity?.Name;
+        var user = await context.Users.FirstAsync(u => u.Username == username);
+        if (msg.UserId != user.Id) return Forbid();
+
+        context.ChatMessages.Remove(msg);
+        await context.SaveChangesAsync(); // Triggers live queries
+
+        return Ok();
+    }
+
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(string room)
     {
         var messages = await context.ChatMessages
-            .Where(m => m.Room == room)
+            .Include(m => m.User)
+            .Where(m => m.RoomId == room)
             .OrderBy(m => m.Timestamp)
             .Take(50)
             .ToListAsync();
