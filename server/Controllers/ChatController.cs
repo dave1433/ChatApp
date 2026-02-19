@@ -71,7 +71,8 @@ public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeMa
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username)) return Unauthorized();
 
-        var user = await context.Users.FirstAsync(u => u.Username == username);
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        if (user == null) return Unauthorized("User not found in database.");
 
         var chatMessage = new ChatMessage
         {
