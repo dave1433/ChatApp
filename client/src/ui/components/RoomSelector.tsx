@@ -23,10 +23,6 @@ export default function RoomSelector({ room, onRoomChange, onJoin, connectionId 
             >
                 Join
             </button>
-
-            <p>
-                <b>Connection ID:</b> {connectionId ?? "Connecting..."}
-            </p>
         </div>
     );
 }

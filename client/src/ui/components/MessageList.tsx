@@ -9,8 +9,6 @@ type Props = {
 export default function MessageList({ messages, onDelete, onUpdate }: Props) {
     return (
         <div>
-            <h2>Last 5 Messages</h2>
-
             <div
                 style={{
                     border: "1px solid gray",
