@@ -15,10 +15,10 @@ public static class NSwagExtensions
     {
         public void Process(DocumentProcessorContext context)
         {
-            var schema = new JsonSchema { Type = JsonObjectType.String };
+            /*var schema = new JsonSchema { Type = JsonObjectType.String };
             foreach (var c in StringConstantsDiscovery.GetAll<T>())
                 schema.Enumeration.Add(c);
-            context.Document.Definitions["StringConstants"] = schema;
+            context.Document.Definitions["StringConstants"] = schema;*/
         }
     }
 }

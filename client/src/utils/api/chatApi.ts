@@ -1,3 +1,13 @@
+export async function fetchMessagesRealtime(connectionId: string, room: string) {
+    const res = await fetch(`/chat/messages-realtime?connectionId=${connectionId}&room=${room}`);
+
+    if (!res.ok) {
+        throw new Error("Failed to subscribe to realtime messages");
+    }
+
+    return res.json();
+}
+
 export async function fetchHistory(room: string) {
     const res = await fetch(`/chat/history?room=${room}`);
 

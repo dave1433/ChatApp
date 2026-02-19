@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../../core/hooks/useAuth";
-import { useChat } from "../../core/hooks/useChat";
+import type { ChatMessage } from "../../core/hooks/useChat";
 import { useSse } from "../../core/hooks/useSse";
-import { joinRoomRequest, sendMessageRequest } from "../../utils/api/chatApi";
+import { fetchMessagesRealtime, joinRoomRequest, sendMessageRequest } from "../../utils/api/chatApi";
 
 import LoginForm from "../components/LoginForm";
 import RoomSelector from "../components/RoomSelector";
@@ -11,13 +11,15 @@ import SendMessageBox from "../components/SendMessageBox";
 
 export default function ChatPage() {
     const [room, setRoom] = useState("general");
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
 
     const { token, role, login, logout } = useAuth();
-    const { messages, addMessage } = useChat(room);
 
-    const { connectionId } = useSse(room, (data) => {
-        addMessage(data.message ?? JSON.stringify(data));
-    });
+    const { connectionId } = useSse<ChatMessage[]>(
+        room, 
+        (id) => fetchMessagesRealtime(id, room),
+        (data) => setMessages(data)
+    );
 
     async function joinRoom() {
         if (!connectionId) return alert("Not connected yet");

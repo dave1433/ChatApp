@@ -5,28 +5,37 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using StateleSSE.AspNetCore;
 using server.Data;
+using StateleSSE.AspNetCore.EfRealtime;
 
 
 namespace server.Controllers;
 
 [ApiController]
 [Route("chat")]
-public class ChatController (ISseBackplane backplane, ChatContext context) : ControllerBase
+public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeManager, ChatContext context)
+    : RealtimeControllerBase(backplane)
 {
-    [HttpGet("Connect")]
-    public async Task Connect()
+    [HttpGet("messages-realtime")]
+    public async Task<RealtimeListenResponse<List<ChatMessage>>> GetMessagesRealtime(string connectionId, string room)
     {
-        await using var sse = await HttpContext.OpenSseStreamAsync();
-        await using var connection = backplane.CreateConnection();
+        var group = $"room-messages:{room}";
+        await backplane.Groups.AddToGroupAsync(connectionId, group);
 
-        await sse.WriteAsync("connected", JsonSerializer.Serialize(new { connection.ConnectionId },
-            new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }));
+        realtimeManager.Subscribe<ChatContext>(connectionId, group,
+            criteria: changes => changes.OfType<ChatMessage>().Any(e => e.Entity.Room == room),
+            query: async ctx => await ctx.ChatMessages
+                .Where(m => m.Room == room)
+                .OrderBy(m => m.Timestamp)
+                .Take(50)
+                .ToListAsync());
 
-        await foreach (var evt in connection.ReadAllAsync(HttpContext.RequestAborted))
-            await sse.WriteAsync(evt.Group ?? "message", evt.Data);
+        var initialData = await context.ChatMessages
+            .Where(m => m.Room == room)
+            .OrderBy(m => m.Timestamp)
+            .Take(50)
+            .ToListAsync();
+
+        return new RealtimeListenResponse<List<ChatMessage>>(group, initialData);
     }
 
     [HttpPost("join")]
@@ -92,6 +101,8 @@ public class ChatController (ISseBackplane backplane, ChatContext context) : Con
     
     
 }
+
+public abstract record BaseResponseDto;
 
 public record PokeResponse(string Message) : BaseResponseDto;
 

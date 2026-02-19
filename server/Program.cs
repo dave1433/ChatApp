@@ -40,10 +40,15 @@ var dbConnection = builder.Environment.IsDevelopment()
     ? Environment.GetEnvironmentVariable("DEVELOPMENT_DB_CONNECTION")
     : Environment.GetEnvironmentVariable("PRODUCTION_DB_CONNECTION");
 
+builder.Services.AddEfRealtime();
+
 if (!string.IsNullOrWhiteSpace(dbConnection))
 {
-    builder.Services.AddDbContext<ChatContext>(options =>
-        options.UseNpgsql(dbConnection));
+    builder.Services.AddDbContext<ChatContext>((sp, options) =>
+    {
+        options.UseNpgsql(dbConnection);
+        options.AddEfRealtimeInterceptor(sp);
+    });
 }
 
 //---------- Authentication ----------
