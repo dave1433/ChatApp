@@ -14,8 +14,8 @@ export async function deleteMessageRequest(id: number, token: string) {
     if (!res.ok) throw new Error("Delete failed");
 }
 
-export async function fetchMessagesRealtime(connectionId: string, room: string) {
-    const res = await fetch(`/chat/messages-realtime?connectionId=${connectionId}&room=${room}`);
+export async function fetchMessagesRealtime(connectionId: string, roomId: string) {
+    const res = await fetch(`/chat/messages-realtime?connectionId=${connectionId}&roomId=${roomId}`);
 
     if (!res.ok) {
         throw new Error("Failed to subscribe to realtime messages");
@@ -24,8 +24,8 @@ export async function fetchMessagesRealtime(connectionId: string, room: string) 
     return res.json();
 }
 
-export async function fetchHistory(room: string) {
-    const res = await fetch(`/chat/history?room=${room}`);
+export async function fetchHistory(roomId: string) {
+    const res = await fetch(`/chat/history?roomId=${roomId}`);
 
     if (!res.ok) {
         throw new Error("Failed to load history");
@@ -34,8 +34,8 @@ export async function fetchHistory(room: string) {
     return res.json();
 }
 
-export async function joinRoomRequest(connectionId: string, room: string) {
-    const res = await fetch(`/chat/join?connectionId=${connectionId}&room=${room}`, {
+export async function joinRoomRequest(connectionId: string, roomId: string) {
+    const res = await fetch(`/chat/join?connectionId=${connectionId}&roomId=${roomId}`, {
         method: "POST",
     });
 
@@ -44,9 +44,9 @@ export async function joinRoomRequest(connectionId: string, room: string) {
     }
 }
 
-export async function sendMessageRequest(room: string, message: string, token: string) {
+export async function sendMessageRequest(roomId: string, message: string, token: string) {
     const res = await fetch(
-        `/chat/send?room=${room}&message=${encodeURIComponent(message)}`,
+        `/chat/send?roomId=${roomId}&message=${encodeURIComponent(message)}`,
         {
             method: "POST",
             headers: {

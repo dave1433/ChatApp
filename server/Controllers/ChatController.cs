@@ -59,10 +59,10 @@ public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeMa
 
     [HttpPost("join")]
     [Produces<JoinResponse>]
-    public async Task Join(string connectionId, string room)
+    public async Task Join(string connectionId, string roomId)
     {
-        await backplane.Groups.AddToGroupAsync(connectionId, room);
-        await backplane.Clients.SendToGroupAsync(room, new JoinResponse("someone has entered room"));
+        await backplane.Groups.AddToGroupAsync(connectionId, roomId);
+        await backplane.Clients.SendToGroupAsync(roomId, new JoinResponse("someone has entered room"));
     }
 
     [Authorize]
@@ -127,11 +127,11 @@ public class ChatController(ISseBackplane backplane, IRealtimeManager realtimeMa
     }
 
     [HttpGet("history")]
-    public async Task<IActionResult> GetHistory(string room)
+    public async Task<IActionResult> GetHistory(string roomId)
     {
         var messages = await context.ChatMessages
             .Include(m => m.User)
-            .Where(m => m.RoomId == room)
+            .Where(m => m.RoomId == roomId)
             .OrderBy(m => m.Timestamp)
             .Take(50)
             .ToListAsync();
