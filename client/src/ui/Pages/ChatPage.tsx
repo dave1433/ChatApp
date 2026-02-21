@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "../../core/hooks/useAuth";
-import { useChat } from "../../core/hooks/useChat";
+import type { ChatMessage } from "../../core/hooks/useChat";
 import { useSse } from "../../core/hooks/useSse";
-import { joinRoomRequest, sendMessageRequest } from "../../utils/api/chatApi";
+import { 
+    fetchMessagesRealtime, 
+    joinRoomRequest, 
+    sendMessageRequest,
+    updateMessageRequest,
+    deleteMessageRequest
+} from "../../utils/api/chatApi";
 
 import LoginForm from "../components/LoginForm";
 import RoomSelector from "../components/RoomSelector";
@@ -11,13 +17,42 @@ import SendMessageBox from "../components/SendMessageBox";
 
 export default function ChatPage() {
     const [room, setRoom] = useState("general");
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-    const { token, role, login, logout } = useAuth();
-    const { messages, addMessage } = useChat(room);
+    const { token, isLoggedIn, role, login, logout } = useAuth();
 
-    const { connectionId } = useSse(room, (data) => {
-        addMessage(data.message ?? JSON.stringify(data));
-    });
+    const { connectionId } = useSse<ChatMessage[]>(
+        room,
+        (id) => fetchMessagesRealtime(id, room),
+        (data) => setMessages(data)
+    );
+
+    useSse<string>(
+        "global",
+        async (id) => {
+            const res = await fetch(`/chat/everyone-notifications?connectionId=${id}`);
+            return await res.json();
+        },
+        (alertMsg) => alert(alertMsg)
+    );
+
+    async function handleUpdate(id: number, content: string) {
+        if (!token) return;
+        try {
+            await updateMessageRequest(id, content, token);
+        } catch {
+            alert("Update failed - maybe you don't own this message?");
+        }
+    }
+
+    async function handleDelete(id: number) {
+        if (!token) return;
+        try {
+            await deleteMessageRequest(id, token);
+        } catch {
+            alert("Delete failed - maybe you don't own this message?");
+        }
+    }
 
     async function joinRoom() {
         if (!connectionId) return alert("Not connected yet");
@@ -53,32 +88,42 @@ export default function ChatPage() {
     }
 
     return (
-        <div style={{ padding: 20, fontFamily: "Arial" }}>
+        <div>
             <h1>🔥 SSE Chat App</h1>
 
-            <RoomSelector
-                room={room}
-                onRoomChange={setRoom}
-                onJoin={joinRoom}
-                connectionId={connectionId}
-            />
+            <div className="app-layout">
 
-            <hr />
+                <div className="sidebar">
+                    <RoomSelector
+                        room={room}
+                        onRoomChange={setRoom}
+                        onJoin={joinRoom}
+                        connectionId={connectionId}
+                    />
 
-            <LoginForm
-                onLogin={handleLogin}
-                isLoggedIn={!!token}
-                role={role}
-                onLogout={logout}
-            />
+                    <LoginForm
+                        onLogin={handleLogin}
+                        isLoggedIn={!!token}
+                        role={role}
+                        onLogout={logout}
+                    />
+                </div>
 
-            <hr />
+                <div className="main-content">
+                    <MessageList
+                        messages={messages}
+                        role={role}
+                        onDelete={handleDelete}
+                        onUpdate={handleUpdate}
+                    />
 
-            <MessageList messages={messages} />
+                    <SendMessageBox
+                        onSend={handleSend}
+                        disabled={!token}
+                    />
+                </div>
 
-            <hr />
-
-            <SendMessageBox onSend={handleSend} disabled={!token} />
+            </div>
         </div>
     );
 }

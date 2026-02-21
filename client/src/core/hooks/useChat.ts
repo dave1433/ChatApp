@@ -3,10 +3,14 @@ import { fetchHistory } from "../../utils/api/chatApi";
 
 export type ChatMessage = {
     id: number;
-    room: string;
-    username: string;
+    roomId: string;
     content: string;
     timestamp: string;
+    userId: number;
+    user?: {
+        id: number;
+        username: string;
+    }
 };
 
 export function useChat(room: string) {
@@ -21,18 +25,5 @@ export function useChat(room: string) {
         load();
     }, [room]);
 
-    function addMessage(content: string, username = "unknown") {
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: Date.now(),
-                room,
-                username,
-                content,
-                timestamp: new Date().toISOString(),
-            },
-        ]);
-    }
-
-    return { messages, setMessages, addMessage };
+    return { messages, setMessages };
 }

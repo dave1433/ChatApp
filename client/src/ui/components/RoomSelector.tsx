@@ -7,8 +7,8 @@ type Props = {
 
 export default function RoomSelector({ room, onRoomChange, onJoin, connectionId }: Props) {
     return (
-        <div>
-            <h2>Room</h2>
+        <div className="card" >
+            <h2 className="section-title">Room</h2>
 
             <input
                 value={room}
@@ -23,10 +23,6 @@ export default function RoomSelector({ room, onRoomChange, onJoin, connectionId 
             >
                 Join
             </button>
-
-            <p>
-                <b>Connection ID:</b> {connectionId ?? "Connecting..."}
-            </p>
         </div>
     );
 }

@@ -16,9 +16,9 @@ export default function SendMessageBox({ onSend, disabled }: Props) {
     }
 
     return (
-        <div>
-            <h2>Send message</h2>
-
+        <div className="card">
+            <div className="section-title">Send message</div>
+           <div className="send-box">
             <input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -30,6 +30,7 @@ export default function SendMessageBox({ onSend, disabled }: Props) {
             <button onClick={handleSend} style={{ marginLeft: 10 }} disabled={disabled}>
                 Send
             </button>
+           </div>
         </div>
     );
 }

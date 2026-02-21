@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
+import { StateleSSEClient } from "statele-sse";
 
-export function useSse(room: string, onMessage: (data: any) => void) {
+export function useSse<T>(
+    room: string, 
+    fetchInitial: (connectionId: string) => Promise<any>, 
+    onData: (data: T) => void
+) {
     const [connectionId, setConnectionId] = useState<string | null>(null);
 
     useEffect(() => {
-        const evtSource = new EventSource("/chat/Connect");
+        const client = new StateleSSEClient("/chat/sse");
 
-        evtSource.addEventListener("connected", (e: MessageEvent) => {
-            const data = JSON.parse(e.data);
-            setConnectionId(data.connectionId);
-        });
-
-        evtSource.addEventListener("message", (e: MessageEvent) => {
-            try {
-                onMessage(JSON.parse(e.data));
-            } catch {
-                onMessage({ message: e.data });
+        const unsub = client.listen<T>(
+            async (id) => {
+                setConnectionId(id);
+                return await fetchInitial(id);
+            },
+            (data) => {
+                onData(data);
             }
-        });
+        );
 
-        return () => evtSource.close();
+        return () => unsub();
     }, [room]);
 
     return { connectionId };

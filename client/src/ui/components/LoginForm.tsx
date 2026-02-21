@@ -17,11 +17,11 @@ export default function LoginForm({ onLogin, isLoggedIn, role, onLogout }: Props
     }
 
     return (
-        <div>
+        <div className="card"  data-testid="login-form">
             <h2>Login</h2>
 
             {!isLoggedIn && (
-                <>
+                <div className="login-inputs">
                     <input
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
@@ -33,13 +33,12 @@ export default function LoginForm({ onLogin, isLoggedIn, role, onLogout }: Props
                         type="password"
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="password"
-                        style={{ marginLeft: 10 }}
                     />
 
-                    <button onClick={handleLogin} style={{ marginLeft: 10 }}>
+                    <button onClick={handleLogin} >
                         Login
                     </button>
-                </>
+                </div>
             )}
 
             {isLoggedIn && (
