@@ -19,39 +19,39 @@ export default function ChatPage() {
     const [room, setRoom] = useState("general");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-    const { token, role, login, logout } = useAuth();
+    const { token, isLoggedIn, role, login, logout } = useAuth();
 
-    // Main Live Query for room messages (Task 2, 3, 5)
     const { connectionId } = useSse<ChatMessage[]>(
-        room, 
+        room,
         (id) => fetchMessagesRealtime(id, room),
         (data) => setMessages(data)
     );
 
-    // Task 4: Realtime @everyone notification
     useSse<string>(
         "global",
         async (id) => {
             const res = await fetch(`/chat/everyone-notifications?connectionId=${id}`);
             return await res.json();
         },
-        (alertMsg) => {
-            alert(alertMsg);
-        }
+        (alertMsg) => alert(alertMsg)
     );
 
     async function handleUpdate(id: number, content: string) {
         if (!token) return;
         try {
             await updateMessageRequest(id, content, token);
-        } catch { alert("Update failed - maybe you don't own this message?"); }
+        } catch {
+            alert("Update failed - maybe you don't own this message?");
+        }
     }
 
     async function handleDelete(id: number) {
         if (!token) return;
         try {
             await deleteMessageRequest(id, token);
-        } catch { alert("Delete failed - maybe you don't own this message?"); }
+        } catch {
+            alert("Delete failed - maybe you don't own this message?");
+        }
     }
 
     async function joinRoom() {
@@ -88,36 +88,42 @@ export default function ChatPage() {
     }
 
     return (
-        <div style={{ padding: 20, fontFamily: "Arial" }}>
+        <div>
             <h1>🔥 SSE Chat App</h1>
 
-            <RoomSelector
-                room={room}
-                onRoomChange={setRoom}
-                onJoin={joinRoom}
-                connectionId={connectionId}
-            />
+            <div className="app-layout">
 
-            <hr />
+                <div className="sidebar">
+                    <RoomSelector
+                        room={room}
+                        onRoomChange={setRoom}
+                        onJoin={joinRoom}
+                        connectionId={connectionId}
+                    />
 
-            <LoginForm
-                onLogin={handleLogin}
-                isLoggedIn={!!token}
-                role={role}
-                onLogout={logout}
-            />
+                    <LoginForm
+                        onLogin={handleLogin}
+                        isLoggedIn={!!token}
+                        role={role}
+                        onLogout={logout}
+                    />
+                </div>
 
-            <hr />
+                <div className="main-content">
+                    <MessageList
+                        messages={messages}
+                        role={role}
+                        onDelete={handleDelete}
+                        onUpdate={handleUpdate}
+                    />
 
-            <MessageList 
-                messages={messages} 
-                onDelete={handleDelete}
-                onUpdate={handleUpdate}
-            />
+                    <SendMessageBox
+                        onSend={handleSend}
+                        disabled={!token}
+                    />
+                </div>
 
-            <hr />
-
-            <SendMessageBox onSend={handleSend} disabled={!token} />
+            </div>
         </div>
     );
 }
